@@ -1,4 +1,4 @@
-import PIXI from 'pixi.js';
+import * as PIXI from "pixi.js";
 
 import './index.html';
 import BaseContainer from './basecontainer';
@@ -7,18 +7,24 @@ import GameOptionsContainer from './gameoptions';
 import GamePlayContainer from './gameplay';
 import { HighScoreContainer, AboutGameContainer, LoaderContainer } from './others';
 import { Config } from './config';
+import { Ticker } from 'pixi.js';
 
+const { Sprite } = PIXI;
+const { resources } = PIXI.Loader.shared;
 
-const renderer = PIXI.autoDetectRenderer(window.innerWidth,
-  window.innerHeight, {
-  antialiasing: false,
-  transparent: false,
-  resolution: window.devicePixelRatio,
-  autoResize: true,
-  backgroundColor: 0x5D371A
-});
+const ticker = Ticker.shared;
+const renderer = new PIXI.autoDetectRenderer(
+  {
+    width: window.innerWidth,
+    height: window.innerHeight,
+    antialiasing: true,
+    transparent: true,
+    resolution: window.devicePixelRatio,
+    autoResize: true,
+    // backgroundColor: 0x5D371A,
+  });
+document.getElementById('game-container').appendChild(renderer.view);
 
-document.body.appendChild(renderer.view);
 
 class Root extends BaseContainer {
   constructor(...args) {
@@ -47,17 +53,24 @@ class Root extends BaseContainer {
       .on('mouseupoutside', this.onMouseUp())
       .on('touchend', this.onMouseUp())
       .on('touchendoutside', this.onMouseUp())
-      //.on('click', this.onClick)
+    // .on('click', this.onClick)
 
-    const options = ["about game", "new game", "high score"];
+    const options = ["new game"];
     const gameContainer = new GameOptionsContainer(options);
     this.add('gameContainer', gameContainer);
 
     this.loadTextures();
+    if (this.get('knife') === undefined) {
+      this.add('knife', new Knife());
+    }
   }
 
   gameInit() {
-    const bg = new PIXI.Sprite(PIXI.Texture.fromFrame('bg.png'));
+    // const bg = new PIXI.Sprite(PIXI.Texture.fromFrame('bg.png'));
+    const bg = new Sprite.from('assets/bg_new.png');
+    // const bg = new Sprite(resources.bgImg.texture);
+
+    bg.alpha = 0.3;
     bg.height = Config.wh; bg.width = Config.ww;
     bg.interactive = true;
     this.add('bg', bg, 0);
@@ -70,8 +83,9 @@ class Root extends BaseContainer {
   }
 
   loadTextures() {
-    PIXI.loader
+    PIXI.Loader.shared
       .add('assets/basics.json')
+      .add("bgImg", "assets/bg_new.png")
       .load(() => {
         this.assetsLoaded();
       });
@@ -87,7 +101,7 @@ class Root extends BaseContainer {
       let position = e.data.global;
       this.mouseData.push({
         x: position.x,
-        y: position.y
+        y: position.y,
       });
       if (this.get('knife') === undefined) {
         this.add('knife', new Knife());
@@ -112,7 +126,7 @@ class Root extends BaseContainer {
         });
 
         let knife = this.get('knife');
-        while(knife.shifts > 0) {
+        while (knife.shifts > 0) {
           this.mouseData.shift();
           knife.shifts -= 1;
         }
@@ -126,38 +140,13 @@ class Root extends BaseContainer {
      * Possible actions: about game, new game, high score
      */
 
-    let gameContainer;
-
-    switch (action) {
-      case "about game":
-        gameContainer = new AboutGameContainer();
-        break;
-      case "new game":
-        const options = ["archade mode", "zen mode", "back"];
-        gameContainer = new GameOptionsContainer(options);
-        break;
-      case "high score":
-        gameContainer = new HighScoreContainer();
-        break;
-    }
-    return gameContainer;
+    return new GamePlayContainer("archade mode");;
   }
 
   reduceNewGame(action) {
     // Possible actions: zen mode, archade mode, back
 
-    let gameContainer;
-
-    switch (action) {
-      case "zen mode":
-      case "archade mode":
-        gameContainer = new GamePlayContainer(action);
-        break;
-      case "back":
-        const options = ["about game", "new game", "high score"];
-        gameContainer = new GameOptionsContainer(options);
-        break;
-    }
+    let gameContainer = new GamePlayContainer("archade mode");
     return gameContainer;
   }
 
@@ -176,12 +165,6 @@ class Root extends BaseContainer {
     switch (prevState) {
       case "initial":
         gameContainer = this.reduceInitial(action);
-        break;
-      case "about game":
-      case "high score":
-        // go back
-        const options = ["about game", "new game", "high score"];
-        gameContainer = new GameOptionsContainer(options);
         break;
       case "new game":
         gameContainer = this.reduceNewGame(action);
@@ -209,10 +192,10 @@ class Root extends BaseContainer {
 
     let action = this.get('gameContainer').handleOptionSelection();
     if (action != undefined) {
-        this.remove('gameContainer');
-        this.containerChange = true;
-        this.add('gameContainer', this.reduce(action));
-        resizeGameContainer();
+      this.remove('gameContainer');
+      this.containerChange = true;
+      this.add('gameContainer', this.reduce(action));
+      resizeGameContainer();
     }
 
     if (this.get('knife') != undefined)
@@ -221,8 +204,10 @@ class Root extends BaseContainer {
 
 }
 
-const stage = new Root();
-
+let stage = new Root();
+ticker.add((time) => renderer.render(stage));
+ticker.maxFPS = 30;
+global.stage = stage;
 let prev = null;
 
 function resizeGameContainer() {
@@ -268,7 +253,7 @@ function resizeGameContainer() {
   }
 }
 
-function resize(){
+function resize() {
   renderer.resize(window.innerWidth, window.innerHeight);
 
   stage.w = renderer.width;
@@ -290,3 +275,4 @@ function animate() {
 
 window.addEventListener("resize", resize);
 animate();
+

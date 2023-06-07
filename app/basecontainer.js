@@ -29,8 +29,7 @@
  * > this.remove('fruits')
  */
 
-import PIXI from 'pixi.js';
-
+let PIXI = require('pixi.js');
 
 export default class BaseContainer extends PIXI.Container {
 
@@ -81,7 +80,7 @@ export default class BaseContainer extends PIXI.Container {
 
     const children = [];
 
-    for(let e of this[name])
+    for (let e of this[name])
       children.push(this.getChildByName(e));
 
     return children;
@@ -95,7 +94,7 @@ export default class BaseContainer extends PIXI.Container {
 
     const _remove = () => {
       if (uid === null) {
-        for(let e of this.getAll(name))
+        for (let e of this.getAll(name))
           this.removeChild(e);
 
         delete this[name];

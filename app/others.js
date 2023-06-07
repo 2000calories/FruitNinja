@@ -1,4 +1,4 @@
-import PIXI from 'pixi.js';
+let PIXI = require('pixi.js');
 
 import BaseContainer from './basecontainer';
 import { isIntersecting } from './helpers';
@@ -11,7 +11,7 @@ class BaseWithBack extends BaseContainer {
   constructor(...args) {
     super(...args);
 
-    const back = new PIXI.Sprite(PIXI.Texture.fromFrame('back.png'));
+    const back = new PIXI.Sprite(PIXI.Texture.from('back.png'));
     back.anchor.x = 0.5;
     back.anchor.y = 0.5;
     back.x = Config.ww * 0.8;
@@ -46,7 +46,7 @@ export class HighScoreContainer extends BaseWithBack {
   }
 
   init() {
-    const label = new PIXI.Sprite.fromImage('assets/highscore.png');
+    const label = new PIXI.Sprite.from('assets/highscore.png');
     label.anchor.x = 0.5; label.anchor.y = 0.5;
     label.width = 300;
     label.x = Config.ww / 2;
@@ -63,7 +63,7 @@ export class AboutGameContainer extends BaseWithBack {
   }
 
   init() {
-    const board = new PIXI.Sprite.fromImage('assets/board.png');
+    const board = new PIXI.Sprite.from('assets/board.png');
     board.width = 600;
     board.x = 100;
     board.y = 100;
@@ -110,7 +110,7 @@ export class StateTransitionContainer extends BaseContainer {
     topLayer.alpha = 0.0;
     this.add('topLayer', topLayer);
 
-    /*const topLayerImage = new PIXI.Sprite.fromImage('assets/transition.gif');
+    /*const topLayerImage = new PIXI.Sprite.from('assets/transition.gif');
     topLayerImage.height = 100;
     topLayerImage.width = 100;
     topLayerImage.x = (this.w - 100) / 2;

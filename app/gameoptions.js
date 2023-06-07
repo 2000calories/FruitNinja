@@ -1,4 +1,4 @@
-import PIXI from 'pixi.js';
+let PIXI = require('pixi.js');
 
 import BaseContainer from './basecontainer';
 import { isIntersecting } from './helpers';
@@ -12,7 +12,7 @@ export class OptionsContainer extends BaseContainer {
 
   constructor(options) {
     super();
-    this.x = 150;
+    this.x = window.innerWidth/2;
     this.y = 400;
     this.optionNames = options;
     this.drawCircles();
@@ -21,11 +21,10 @@ export class OptionsContainer extends BaseContainer {
   }
 
   drawCircles() {
-    for(let i = 0; i < 3; i += 1) {
-      const option = new PIXI.Sprite(PIXI.Texture.fromFrame('circle.png'));
+    for(let i = 0; i < 1; i += 1) {
+      const option = new PIXI.Sprite(PIXI.Texture.from('circle.png'));
       option.width = 200; option.height = 200;
-      option.x = 250 * i;
-      if (i == 1) option.y = -100;
+      option.anchor.set(0.5, 0);
       this.add('optionCircles', option);
     }
   }
@@ -61,7 +60,7 @@ export class OptionsContainer extends BaseContainer {
       const textContainer = new TextOnPerimiterContainer({
         'x': option.x + r,
         'y': option.y + r
-      }, r - imageExtraPadding, text);
+      }, r - imageExtraPadding + 5, text);
       this.add('textsContainer', textContainer);
     }
   }
@@ -73,10 +72,10 @@ export class OptionsContainer extends BaseContainer {
       const option = optionCircles[i];
       const r = option.width/2;
 
-      const fruit = new PIXI.Sprite(PIXI.Texture.fromFrame(`option${i}.png`));
+      const fruit = new PIXI.Sprite(PIXI.Texture.from(`option${i}.png`));
       fruit.anchor.x = 0.5; fruit.anchor.y = 0.5;
       fruit.width = 4*r/5; fruit.height = 4*r/5;
-      fruit.x = option.x + r; fruit.y = option.y + r;
+      fruit.x = option.x; fruit.y = option.y + r;
       fruit.rotation -= 1;
       this.add('fruitsContainer', fruit);
     }
@@ -89,7 +88,7 @@ export class OptionsContainer extends BaseContainer {
 
     // animate fruits
     this.getAll('fruitsContainer').forEach((fruit, i) => {
-      let rotation = 0.05;
+      let rotation = 0.03;
       if (i == 1)
         fruit.rotation -= rotation;
       else
@@ -123,9 +122,10 @@ export class TextOnPerimiterContainer extends BaseContainer {
     let theta = -Math.PI/2;
     for(let i = 0; i < this.text.length; i += 1) {
       const text = new PIXI.Text(this.text[i], this.style);
-      text.anchor.x = 0.5; text.anchor.y = 0.5;
+      // text.anchor.x = 0.5; text.anchor.y = 0.5;
+      text.anchor.set(0.5, 0);
       text.pivot.x = 0;
-      text.x = this.center.x;
+      // text.x = this.center.x;
       text.pivot.y = this.r;
       text.y = text.pivot.y + (this.center.y - this.r);
       text.rotation = theta + i*0.3;
@@ -155,13 +155,13 @@ export class GameLabelContainer extends BaseContainer {
   }
 
   drawLabel() {
-    const fruit = new PIXI.Sprite(PIXI.Texture.fromFrame('logofruit.png'));
-    fruit.width = 400; fruit.height = 150;
-    this.addChild(fruit);
+    // const fruit = new PIXI.Sprite(PIXI.Texture.from('logofruit.png'));
+    // fruit.width = 400; fruit.height = 150;
+    // this.addChild(fruit);
 
-    const ninja = new PIXI.Sprite(PIXI.Texture.fromFrame('logoninja.png'));
-    ninja.x = 450; ninja.width = 300; ninja.height = 150;
-    this.addChild(ninja);
+    // const ninja = new PIXI.Sprite(PIXI.Texture.from('logoninja.png'));
+    // ninja.x = 450; ninja.width = 300; ninja.height = 150;
+    // this.addChild(ninja);
   }
 }
 

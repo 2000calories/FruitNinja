@@ -1,15 +1,15 @@
 export const Config = {
   fruit: {
-    size: 80,
-    vx: 5,
-    vy: -10,
+    size: 50,
+    vx: 3,
+    vy: -6,
   },
-  acc: 0.1,
+  acc: 0.04,
   drops: {
     rad: 25,
   },
   halfFruit: {
-    size: 80,
+    size: 50,
   },
   splash: {
     size: 150,
@@ -20,8 +20,8 @@ export const Config = {
     freeze: 0xFFFFFF,
     bomb: 0xFFFFFF,
   },
-  ww: 1301,
-  wh: 654,
+  ww: window.innerWidth,
+  wh: window.innerHeight,
 };
 
 export const imageMappings = {};

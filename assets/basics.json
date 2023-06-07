@@ -10,11 +10,11 @@
 },
 "bg.png":
 {
-	"frame": {"x":64,"y":0,"w":800,"h":600},
+	"frame": {"x":64,"y":0,"w":400,"h":600},
 	"rotated": false,
 	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":800,"h":600},
-	"sourceSize": {"w":800,"h":600}
+	"spriteSourceSize": {"x":0,"y":0,"w":400,"h":600},
+	"sourceSize": {"w":400,"h":600}
 },
 "circle.png":
 {

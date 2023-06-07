@@ -1,24 +1,235 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport"
-      content="width=device-width, initial-scale=1, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <title>FruitNinja</title>
+  <!-- Require the peer dependencies of pose-detection. -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+  <!-- You must explicitly require a TF.js backend if you're not using the TF.js union bundle. -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+  <!-- Alternatively you can use the WASM backend: <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm/dist/tf-backend-wasm.js"></script> -->
+  <!-- pose-detection -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+
+  <!-- pixi -->
+  <!-- <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.x/dist/pixi.min.js"></script> -->
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/5.3.10/pixi.min.js"></script> -->
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js-legacy.js/5.3.10/pixi.js-legacy.min.js"></script> -->
+  <!-- <script src="https://unpkg.com/@pixi/sound@4.3.3/dist/pixi-sound.js"></script> -->
   <style>
-    html, body, canvas {
+    html,
+    body,
+    canvas {
       width: 100%;
       height: 100%;
       margin: 0;
-      cursor: url('assets/blade.png'), auto;
+      cursor: url('assets/laser_50px.png'), auto;
     }
+
     canvas {
       display: block;
       margin: auto;
     }
   </style>
+  <style>
+    .container {
+      position: absolute;
+      left: 0px;
+      top: 0px;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #video {
+      position: absolute;
+      /* margin: 30px; */
+      z-index: 1;
+      transform: rotateY(180deg);
+      -webkit-transform: rotateY(180deg);
+      /* Safari and Chrome */
+      -moz-transform: rotateY(180deg);
+      /* Firefox */
+      /* width: 100vw; */
+      /* height: 100vh;
+            object-fit: contain; */
+      background-size: contain;
+      background-position: center center;
+      position: fixed;
+      object-fit: cover;
+      width: 100%;
+      height: 100%;
+    }
+
+    #game-container {
+      z-index: 2;
+      position: absolute;
+      /* margin: 30px; */
+    }
+  </style>
 </head>
+
 <body>
+  <div class="container" id="main-container">
+
+    <video id="video" autoplay></video>
+    <div class="video-options" style="position: absolute;right: 20px;z-index: 10;top: 5px;padding: 5px; opacity: 0.5;">
+      <select name="" id="video_source" style="padding: 5px; width: 100px;text-align: center;">
+      </select>
+    </div>
+    <div id="game-container">
+
+    </div>
+    <canvas id="output" style="z-index: 1;position: absolute;"></canvas>
+  </div>
   <script src="bundle.js"></script>
 </body>
+<script type="text/javascript">
+
+  window.onload = function () {
+    const windowHeight = window.innerHeight;
+    const windowWidth = window.innerWidth;
+    const video = document.getElementById('video');
+    const cameraOptions = document.querySelector('.video-options>select');
+    const canvas = document.getElementById('output');
+    canvas.width = windowWidth;
+    canvas.height = windowHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.translate(windowWidth, 0);
+    ctx.scale(-1, 1);
+
+    document.getElementById('main-container').style.width = windowWidth + "px";
+    document.getElementById('main-container').style.height = windowHeight + "px";
+
+    const getCameraSelection = async () => {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      let options = videoDevices.map((videoDevice, index) => {
+        device_label = videoDevice.label;
+        if (device_label == "") {
+          device_label = "Camera " + index;
+        }
+        return `<option value="${videoDevice.deviceId}">${device_label}</option>`;
+      });
+      options.unshift(`<option value="">Camera</option>`);
+      cameraOptions.innerHTML = options.join('');
+      const updatedConstraints = {
+        video: {
+          // deviceId: deviceId,
+          facingMode: "user",
+          width: windowWidth, height: windowHeight,
+          frameRate: { max: 12 },
+        }
+      };
+      navigator.mediaDevices.getUserMedia(updatedConstraints).then((stream) => {
+        video.srcObject = stream;
+      });
+      await new Promise(resolve => setTimeout(resolve, 500));
+    };
+
+
+    var video_source = document.getElementById("video_source");
+    video_source.addEventListener('change', changeCamera);
+    function changeCamera(event) {
+      var selectElement = event.target;
+      var deviceId = selectElement.value;
+
+      const updatedConstraints = {
+        video: {
+          deviceId: deviceId,
+          frameRate: { max: 20 },
+        }
+      };
+      video.srcObject.getTracks().forEach(t => t.stop());
+      navigator.mediaDevices.getUserMedia(updatedConstraints).then((stream) => {
+        video.srcObject = stream;
+      });
+    }
+
+    let started = false;
+    let detector;
+    let poses = [];
+    let keypointIndex;
+    async function init() {
+      //SINGLEPOSE_LIGHTNING, MULTIPOSE_LIGHTNING
+      await tf.ready();
+      await getCameraSelection();
+      const model = poseDetection.SupportedModels.BlazePose;
+      const detectorConfig = {
+        runtime: 'mediapipe', // or 'tfjs',
+        solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/pose',
+        modelType: 'lite',
+      }
+      detector = await poseDetection.createDetector(model, detectorConfig);
+      const url = new URL(window.location.href);
+      const bodyPart = url.searchParams.get("bodyPart");
+      keypointIndex = bodyPartToPoseKeypoints(bodyPart);
+    }
+    function bodyPartToPoseKeypoints(bodyPart) {
+      // https://github.com/tensorflow/tfjs-models/tree/master/pose-detection
+      let keypointIndex;
+      switch (bodyPart) {
+        case 'left_hand':
+          keypointIndex = [19];
+          break;
+        case 'right_hand':
+          keypointIndex = [20];
+          break;
+        case 'mouth':
+          keypointIndex = [9, 10];
+          break;
+        default:
+          keypointIndex = [19];
+          break;
+      }
+      return keypointIndex;
+    }
+    async function poseDetect() {
+      // Pass in a video stream to the model to detect poses.
+      const start = Date.now();
+      const pose = await detector.estimatePoses(video);
+      // check if pose is valid
+      if (pose.length > 0) {
+        // console.log(pose);
+        const keypoints = keypointIndex.map(index => pose[0].keypoints[index]);
+        const avg_x = keypoints.map(keypoint => keypoint.x).reduce((a, b) => a + b) / keypoints.length;
+        const avg_y = keypoints.map(keypoint => keypoint.y).reduce((a, b) => a + b) / keypoints.length;
+        const avg_score = keypoints.map(keypoint => keypoint.score).reduce((a, b) => a + b) / keypoints.length;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (stage && avg_score >= 0.8) {
+          stage.cutting = true;
+          stage.mouseData.push({
+            x: windowWidth - avg_x,
+            y: avg_y
+          });
+          let knife = stage.get('knife');
+          while (knife.shifts > 0) {
+            stage.mouseData.shift();
+            knife.shifts -= 1;
+          }
+          const circle = new Path2D();
+          circle.arc(avg_x, avg_y, 10, 0, 2 * Math.PI);
+          ctx.fill(circle);
+          ctx.stroke(circle);
+        }
+      }
+      const detectTime = Date.now() - start;
+      // when frameRate is 12, each frame has 83 millseconds;
+      let delay = Math.max(83 - detectTime, 0);
+      setTimeout(() => {
+        poseDetect();
+      }, delay);
+    }
+
+    init().then(() => {
+      poseDetect();
+    });
+
+  }
+</script>
+
 </html>
